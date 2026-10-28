@@ -2,18 +2,19 @@ name: Auto Update Xtream Codes
 
 on:
   schedule:
-    # Berjalan otomatis setiap hari jam 00:00 UTC (Bisa disesuaikan menggunakan format Cron)
     - cron: '0 0 * * *'
-  workflow_dispatch: # Membuat tombol agar bisa dijalankan manual kapan saja
+  workflow_dispatch: # Memungkinkan tombol jalankan manual
 
 jobs:
   update-list:
     runs-on: ubuntu-latest
 
     steps:
-    # 1. Checkout repositori agar GitHub Actions bisa membaca dan menulis file
+    # 1. Checkout repositori dengan token bawaan GitHub agar punya hak akses Write
     - name: Checkout Repository
       uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
 
     # 2. Setup environment Python
     - name: Set up Python
@@ -21,13 +22,13 @@ jobs:
       with:
         python-version: '3.x'
 
-    # 3. Install library yang dibutuhkan
+    # 3. Install library requests
     - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
         pip install requests
 
-   # 4. Jalankan skrip Python dengan memasukkan Secrets sebagai Environment Variables
+    # 4. Jalankan skrip Python untuk ambil data Xtream Codes
     - name: Run Update Script
       env:
         XTREAM_URL: ${{ secrets.XTREAM_URL }}
@@ -35,20 +36,20 @@ jobs:
         XTREAM_PASS: ${{ secrets.XTREAM_PASS }}
       run: python update_xtream.py
 
-  # 5. Commit dan Push file hasil ekspor kembali ke GitHub
+    # 5. Commit dan Push file secara paksa ke repositori
     - name: Commit and Push Changes
       run: |
         git config --local user.email "41898282+github-actions[bot]@://github.com"
         git config --local user.name "github-actions[bot]"
         
-        # Mendaftarkan kedua kemungkinan file ke Git
-        git add playlist.m3u playlist.json 2>/dev/null || true
+        # Paksa Git untuk melacak file playlist.json
+        git add -A
         
-        # Mengecek apakah ada file baru yang terdaftar untuk di-commit
+        # Jalankan pengecekan status perubahan
         if ! git diff --cached --quiet; then
-          git commit -m "Auto-update playlist: $(date +'%Y-%m-%d %H:%M:%S')"
-          git push
-          echo "Sukses: File baru berhasil diunggah ke GitHub!"
+          git commit -m "Auto-update playlist JSON: $(date +'%Y-%m-%d %H:%M:%S')"
+          git push origin HEAD:${{ github.ref_name }}
+          echo "Sukses: File playlist.json berhasil diunggah ke GitHub!"
         else
-          echo "Info: Tidak ada perubahan data atau file dari unduhan sebelumnya."
+          echo "Info: Tidak ada perubahan konten atau file dari unduhan sebelumnya."
         fi
