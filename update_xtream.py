@@ -1,59 +1,72 @@
 import os
 import requests
 
-# Mengambil konfigurasi dari GitHub Secrets demi keamanan
-# Jika ingin tes lokal, Anda bisa mengganti os.environ.get dengan string manual, contoh: URL = "http://domain.com:8080"
 URL = os.environ.get("XTREAM_URL", "http://poseidon.neorpahe.top:8080")
 USERNAME = os.environ.get("XTREAM_USER", "3571790698170")
 PASSWORD = os.environ.get("XTREAM_PASS", "613a3d618652")
 
-def fetch_xtream_data():
-    # Menggunakan format m3u_plus yang umumnya lebih stabil diterima server
-    playlist_url = f"{URL}/get.php?auth={USERNAME}&auth_password={PASSWORD}&output=ts&type=m3u_plus"
-    
-    # Header browser palsu untuk melewati proteksi firewall/bot server Xtream Codes
+def try_fetch(url, description):
+    # Menggunakan User-Agent TiviMate yang dipercaya oleh server Xtream Codes
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'User-Agent': 'TiviMate/4.7.0 (Linux; Android 11)',
         'Accept': '*/*',
         'Connection': 'keep-alive'
     }
-    
     try:
-        print("Sedang menyambungkan ke server Xtream Codes...")
-        response = requests.get(playlist_url, headers=headers, timeout=45)
+        print(f"Mencoba {description}...")
+        response = requests.get(url, headers=headers, timeout=30)
         
-        # Mengecek apakah data berhasil diambil
         if response.status_code == 200:
-            # Memastikan isi respon tidak kosong atau tidak berisi teks error
+            # Cegah respon tipuan yang berisi teks error di dalam status 200
             if "INVALID CREDENTIALS" in response.text.upper() or "UNAUTHORIZED" in response.text.upper():
-                print("Gagal: Server merespon 200, tetapi teks berisi 'Unauthorized'. Periksa kembali Username/Password.")
-                return
-
-            with open("playlist.m3u", "w", encoding="utf-8") as f:
-                f.write(response.text)
-            print("Sukses! File playlist.m3u berhasil diperbarui dan disimpan.")
-            
+                print(f"-> Gagal {description}: Server merespon 200 tetapi teks berisi 'Unauthorized'.")
+                return None
+                
+            print(f"-> BERHASIL menggunakan {description}!")
+            return response.text
         else:
-            print(f"Gagal mengambil data. Status code: {response.status_code}")
-            print("Catatan: Jika tetap 401, periksa kembali URL, Username, dan Password Anda.")
-            
-    except requests.exceptions.Timeout:
-        print("Gagal: Waktu koneksi habis (Timeout). Server tujuan lambat atau memblokir IP GitHub.")
+            print(f"-> Gagal {description}. Status code: {response.status_code}")
+            return None
     except Exception as e:
-        print(f"Terjadi kesalahan sistem: {e}")
+        print(f"-> Error pada {description}: {e}")
+        return None
+
+def fetch_xtream_data():
+    # 3 Variasi URL Endpoint Xtream Codes yang paling sering diterima server
+    endpoints = [
+        {
+            "url": f"{URL}/get.php?auth={USERNAME}&auth_password={PASSWORD}&output=ts",
+            "desc": "Metode Standard (get.php)"
+        },
+        {
+            "url": f"{URL}/get.php?username={USERNAME}&password={PASSWORD}&output=ts&type=m3u_plus",
+            "desc": "Metode M3U Plus"
+        },
+        {
+            "url": f"{URL}/player_api.php?username={USERNAME}&password={PASSWORD}",
+            "desc": "Metode Player API (JSON)"
+        }
+    ]
+    
+    playlist_content = None
+    
+    # Loop untuk mencoba semua metode hingga salah satu berhasil
+    for endpoint in endpoints:
+        playlist_content = try_fetch(endpoint["url"], endpoint["desc"])
+        if playlist_content:
+            # Jika berhasil, tentukan nama file berdasarkan output (M3U atau JSON)
+            filename = "playlist.json" if "player_api.php" in endpoint["url"] else "playlist.m3u"
+            
+            with open(filename, "w", encoding="utf-8") as f:
+                f.write(playlist_content)
+            print(f"Sukses! File {filename} berhasil disimpan.")
+            return
+
+    # Jika semua metode melempar error
+    print("\n[KESIMPULAN EROR 401]:")
+    print("1. Periksa kembali keaslian isi Github Secrets Anda (apakah ada spasi terikut?).")
+    print("2. Server Xtream Codes Anda memblokir IP server GitHub Actions secara total.")
+    print("Solusi alternatif: Skrip ini harus dijalankan di VPS pribadi / PC lokal menggunakan Cron Job, bukan di GitHub.")
 
 if __name__ == "__main__":
     fetch_xtream_data()
-
-
-
-
-
-
-
-
-
-
-
-
-
