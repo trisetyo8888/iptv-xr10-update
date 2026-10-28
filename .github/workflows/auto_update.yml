@@ -35,18 +35,15 @@ jobs:
         XTREAM_PASS: ${{ secrets.XTREAM_PASS }}
       run: python update_xtream.py
 
-   # 5. Commit dan Push file hasil ekspor kembali ke GitHub jika file berhasil terbuat
+   # 5. Commit dan Push file hasil ekspor kembali ke GitHub jika ada file yang sukses terbuat
     - name: Commit and Push Changes
       run: |
-        # Memastikan file playlist.m3u benar-benar ada sebelum menjalankan Git
-        if [ -f "playlist.m3u" ]; then
+        if [ -f "playlist.m3u" ] || [ -f "playlist.json" ]; then
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add playlist.m3u
-          
-          # Hanya commit jika ada perubahan konten pada file
+          git add playlist.m3u playlist.json 2>/dev/null || true
           git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update playlist: $(date +'%Y-%m-%d %H:%M:%S')" && git push)
         else
-          echo "Error: File playlist.m3u tidak ditemukan. Skrip Python kemungkinan gagal mengunduh data."
+          echo "Error: Server IPTV memblokir akses dari GitHub Actions pada semua metode."
           exit 1
         fi
