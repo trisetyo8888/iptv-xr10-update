@@ -33,12 +33,20 @@ jobs:
         XTREAM_URL: ${{ secrets.XTREAM_URL }}
         XTREAM_USER: ${{ secrets.XTREAM_USER }}
         XTREAM_PASS: ${{ secrets.XTREAM_PASS }}
-      run: python update_xtream.py
+      run: python update_xtream.p
 
-    # 5. Commit dan Push file hasil ekspor kembali ke GitHub jika ada perubahan
+   # 5. Commit dan Push file hasil ekspor kembali ke GitHub jika file berhasil terbuat
     - name: Commit and Push Changes
       run: |
-        git config --local user.email "github-actions[bot]@://github.com"
-        git config --local user.name "github-actions[bot]"
-        git add playlist.m3u
-        git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update playlist: $(date +'%Y-%m-%d %H:%M:%S')" && git push)
+        # Memastikan file playlist.m3u benar-benar ada sebelum menjalankan Git
+        if [ -f "playlist.m3u" ]; then
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add playlist.m3u
+          
+          # Hanya commit jika ada perubahan konten pada file
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update playlist: $(date +'%Y-%m-%d %H:%M:%S')" && git push)
+        else
+          echo "Error: File playlist.m3u tidak ditemukan. Skrip Python kemungkinan gagal mengunduh data."
+          exit 1
+        fi
