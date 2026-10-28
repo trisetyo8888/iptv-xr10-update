@@ -3,7 +3,7 @@ import requests
 
 # Mengambil konfigurasi dari GitHub Secrets demi keamanan
 # Jika ingin tes lokal, Anda bisa mengganti os.environ.get dengan string manual, contoh: URL = "http://domain.com:8080"
-URL = os.environ.get("XTREAM_URL", "http://poseidon.neorpahe.top:8080/")
+URL = os.environ.get("XTREAM_URL", "http://poseidon.neorpahe.top:8080")
 USERNAME = os.environ.get("XTREAM_USER", "3571790698170")
 PASSWORD = os.environ.get("XTREAM_PASS", "613a3d618652")
 
